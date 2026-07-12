@@ -25,11 +25,13 @@ app.use('/api', apiRoutes);
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
 
-  app.get('*', (req, res) =>
-    res.sendFile(
-      path.resolve(__dirname, '../', 'client', 'dist', 'index.html')
-    )
-  );
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.originalUrl.startsWith('/api')) {
+      res.sendFile(path.resolve(__dirname, '../', 'client', 'dist', 'index.html'));
+    } else {
+      next();
+    }
+  });
 } else {
   app.get('/', (req, res) => {
     res.send('TransitOps API is running...');

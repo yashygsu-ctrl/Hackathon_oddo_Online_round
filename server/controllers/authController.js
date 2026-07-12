@@ -4,7 +4,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  const secret = process.env.JWT_SECRET || 'hackathon_super_secret_key_123';
+  return jwt.sign({ id }, secret, { expiresIn: '30d' });
 };
 
 const authUser = asyncHandler(async (req, res) => {

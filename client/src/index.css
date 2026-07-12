@@ -10,5 +10,15 @@
 
 body {
   background-color: var(--color-background-dark);
-  color: #f3f4f6; /* Tailwind text-gray-100 */
+  color: #f3f4f6;
+  transition: filter 0.3s ease, background-color 0.3s ease;
+}
+
+html.light-mode {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+html.light-mode img,
+html.light-mode .no-invert {
+  filter: invert(1) hue-rotate(180deg);
 }

@@ -65,14 +65,61 @@ const addTrip = asyncHandler(async (req, res) => {
   const trip = await Trip.create({
     tripId, source, destination, vehicle, driver, weight, distance, status: 'Dispatched', timeInfo: 'Just now'
   });
+  
+  // Transition logic: dispatching marks vehicle and driver as On Trip
+  await Vehicle.findByIdAndUpdate(vehicle, { status: 'On Trip' });
+  await Driver.findByIdAndUpdate(driver, { status: 'On Trip' });
+
   const newTrip = await Trip.findById(trip._id).populate('vehicle').populate('driver');
   res.status(201).json(newTrip);
 });
 
 // @route   DELETE /api/trips/:id
 const deleteTrip = asyncHandler(async (req, res) => {
+  const trip = await Trip.findById(req.params.id);
+  if (trip && trip.status === 'Dispatched') {
+    // Restore vehicle and driver if cancelling a dispatched trip
+    await Vehicle.findByIdAndUpdate(trip.vehicle, { status: 'Available' });
+    await Driver.findByIdAndUpdate(trip.driver, { status: 'Available' });
+  }
   await Trip.findByIdAndDelete(req.params.id);
   res.json({ message: 'Trip removed' });
+});
+
+// @route   POST /api/trips/:id/complete
+const completeTrip = asyncHandler(async (req, res) => {
+  const { finalOdometer, fuelConsumed } = req.body;
+  const trip = await Trip.findById(req.params.id).populate('vehicle');
+  
+  if (!trip) return res.status(404).json({ message: 'Trip not found' });
+
+  trip.status = 'Completed';
+  trip.timeInfo = 'Finished';
+  await trip.save();
+
+  // Revert vehicle and driver
+  await Vehicle.findByIdAndUpdate(trip.vehicle._id, { status: 'Available', odometer: finalOdometer });
+  await Driver.findByIdAndUpdate(trip.driver, { status: 'Available' });
+
+  // Record fuel expense
+  if (fuelConsumed && Number(fuelConsumed) > 0) {
+    const cost = Number(fuelConsumed) * 95; // e.g., 95 per liter
+    const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    await Expense.create({
+      type: 'Fuel',
+      vehicle: trip.vehicle._id,
+      trip: trip._id,
+      date: today,
+      liters: `${fuelConsumed} L`,
+      fuelCost: cost.toString(),
+      toll: '0',
+      other: '0',
+      maintCost: '0'
+    });
+  }
+
+  const updatedTrip = await Trip.findById(trip._id).populate('vehicle').populate('driver');
+  res.json(updatedTrip);
 });
 
 // @route   POST /api/maintenance
@@ -81,13 +128,21 @@ const addMaintenance = asyncHandler(async (req, res) => {
   const maint = await Maintenance.create({
     vehicle, service, cost, date, status: 'In Shop'
   });
+  
+  // Automate: Adding vehicle to Maintenance Log switches its status to "In Shop"
+  await Vehicle.findByIdAndUpdate(vehicle, { status: 'In Shop' });
+
   const newMaint = await Maintenance.findById(maint._id).populate('vehicle');
   res.status(201).json(newMaint);
 });
 
 // @route   DELETE /api/maintenance/:id
 const deleteMaintenance = asyncHandler(async (req, res) => {
-  await Maintenance.findByIdAndDelete(req.params.id);
+  const maint = await Maintenance.findById(req.params.id);
+  if (maint) {
+    await Vehicle.findByIdAndUpdate(maint.vehicle, { status: 'Available' });
+    await Maintenance.findByIdAndDelete(req.params.id);
+  }
   res.json({ message: 'Maintenance record removed' });
 });
 
@@ -115,6 +170,7 @@ module.exports = {
   deleteDriver,
   addTrip,
   deleteTrip,
+  completeTrip,
   addMaintenance,
   deleteMaintenance,
   addExpense,

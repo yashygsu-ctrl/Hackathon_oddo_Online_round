@@ -12,8 +12,10 @@ const Trips = () => {
   const fetchDrivers = useStore(state => state.fetchDrivers);
   const addTrip = useStore(state => state.addTrip);
   const deleteTrip = useStore(state => state.deleteTrip);
+  const completeTrip = useStore(state => state.completeTrip);
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [completionModal, setCompletionModal] = useState({ open: false, tripId: null, odometer: '', fuel: '' });
 
   const user = useStore(state => state.user) || { role: 'Dispatcher' };
   const canEdit = user.role === 'Dispatcher';
@@ -36,9 +38,20 @@ const Trips = () => {
   const availableVehicles = vehicles.filter(v => v.status === 'Available');
   const availableDrivers = drivers.filter(d => d.status === 'Available');
 
+  const parseCapacity = (capStr) => {
+    if (!capStr) return 0;
+    const lower = capStr.toLowerCase();
+    if (lower.includes('ton')) return parseFloat(lower) * 1000;
+    return parseFloat(lower) || 0;
+  };
+  const selectedVehicleObj = vehicles.find(v => v._id === formData.vehicle);
+  const maxCapacity = selectedVehicleObj ? parseCapacity(selectedVehicleObj.capacity) : 0;
+  const isOverloaded = formData.weight && maxCapacity > 0 && parseFloat(formData.weight) > maxCapacity;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.vehicle || !formData.driver) return alert("Select vehicle and driver");
+    if (isOverloaded) return alert(`Cargo weight (${formData.weight} kg) exceeds vehicle capacity (${maxCapacity} kg)`);
     
     await addTrip({
       tripId: `TR00${Math.floor(Math.random() * 900) + 10}`,
@@ -137,9 +150,9 @@ const Trips = () => {
                 <input required type="number" min="0" value={formData.distance} onChange={(e) => setFormData({...formData, distance: e.target.value})} className="w-full px-3 py-2 bg-transparent border border-[#444] rounded text-sm text-gray-300 focus:outline-none focus:border-primary" />
               </div>
 
-              {formData.weight > 500 && formData.vehicle && (
+              {isOverloaded && (
                 <div className="col-span-full border border-red-500/50 rounded p-3">
-                  <p className="text-[#f87171] font-bold text-sm mt-1">X Capacity exceeded or close to limit — check load</p>
+                  <p className="text-[#f87171] font-bold text-sm mt-1">X Cargo exceeds vehicle maximum capacity ({maxCapacity} kg)</p>
                 </div>
               )}
 
@@ -178,6 +191,9 @@ const Trips = () => {
                   </span>
                   <div className="flex items-center gap-4">
                     <span className="text-gray-500 text-xs">{trip.timeInfo}</span>
+                    {canEdit && trip.status === 'Dispatched' && (
+                      <button onClick={() => setCompletionModal({ open: true, tripId: trip._id, odometer: '', fuel: '' })} className="text-[#10b981] hover:text-[#059669] text-xs font-bold uppercase">Complete</button>
+                    )}
                     {canEdit && <button onClick={() => deleteTrip(trip._id)} className="text-red-400 hover:text-red-300 text-xs font-bold uppercase">Delete</button>}
                   </div>
                 </div>
@@ -190,6 +206,38 @@ const Trips = () => {
           </div>
         </div>
         
+        {/* Completion Modal */}
+        {completionModal.open && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+            <div className="bg-[#1a1a1a] border border-[#333] p-6 rounded-lg w-96">
+              <h3 className="text-sm text-gray-200 uppercase tracking-widest mb-6">Complete Trip</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Final Odometer</label>
+                  <input type="number" value={completionModal.odometer} onChange={e => setCompletionModal({...completionModal, odometer: e.target.value})} className="w-full px-3 py-2 bg-transparent border border-[#444] rounded text-sm text-gray-300 focus:outline-none focus:border-primary" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">Fuel Consumed (Liters)</label>
+                  <input type="number" value={completionModal.fuel} onChange={e => setCompletionModal({...completionModal, fuel: e.target.value})} className="w-full px-3 py-2 bg-transparent border border-[#444] rounded text-sm text-gray-300 focus:outline-none focus:border-primary" />
+                </div>
+                <div className="flex gap-4 pt-4">
+                  <button onClick={() => setCompletionModal({ open: false, tripId: null, odometer: '', fuel: '' })} className="flex-1 py-2 border border-[#444] text-gray-400 rounded text-sm font-medium hover:text-white">Cancel</button>
+                  <button 
+                    onClick={async () => {
+                      if (!completionModal.odometer || !completionModal.fuel) return alert("Fill all fields");
+                      await completeTrip(completionModal.tripId, completionModal.odometer, completionModal.fuel);
+                      setCompletionModal({ open: false, tripId: null, odometer: '', fuel: '' });
+                    }} 
+                    className="flex-1 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded text-sm font-medium transition-colors"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </Layout>
   );

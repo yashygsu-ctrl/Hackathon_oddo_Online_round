@@ -1,9 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import { ChevronDown } from 'lucide-react';
 import useStore from '../store/useStore';
 
 const Dashboard = () => {
+  const [typeFilter, setTypeFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [regionFilter, setRegionFilter] = useState('All');
   const vehicles = useStore(state => state.vehicles);
   const drivers = useStore(state => state.drivers);
   const trips = useStore(state => state.trips);
@@ -18,16 +21,27 @@ const Dashboard = () => {
     fetchTrips();
   }, [fetchVehicles, fetchDrivers, fetchTrips]);
 
-  const activeVehicles = vehicles.filter(v => v.status === 'On Trip').length;
-  const availableVehicles = vehicles.filter(v => v.status === 'Available').length;
-  const maintVehicles = vehicles.filter(v => v.status === 'In Shop').length;
-  const retiredVehicles = vehicles.filter(v => v.status === 'Retired').length;
+  const filteredVehicles = vehicles.filter(v => {
+    if (typeFilter !== 'All' && v.type !== typeFilter) return false;
+    if (statusFilter !== 'All' && v.status !== statusFilter) return false;
+    return true;
+  });
 
-  const activeTrips = trips.filter(t => t.status === 'Dispatched').length;
-  const pendingTrips = trips.filter(t => t.status === 'Draft').length;
+  const filteredTrips = trips.filter(t => {
+    if (regionFilter !== 'All' && !t.source.includes(regionFilter) && !t.destination.includes(regionFilter)) return false;
+    return true;
+  });
+
+  const activeVehicles = filteredVehicles.filter(v => v.status === 'On Trip').length;
+  const availableVehicles = filteredVehicles.filter(v => v.status === 'Available').length;
+  const maintVehicles = filteredVehicles.filter(v => v.status === 'In Shop').length;
+  const retiredVehicles = filteredVehicles.filter(v => v.status === 'Retired').length;
+
+  const activeTrips = filteredTrips.filter(t => t.status === 'Dispatched').length;
+  const pendingTrips = filteredTrips.filter(t => t.status === 'Draft').length;
   const driversOnDuty = drivers.filter(d => d.status === 'On Trip').length;
   
-  const util = vehicles.length > 0 ? Math.round((activeVehicles / vehicles.length) * 100) : 0;
+  const util = filteredVehicles.length > 0 ? Math.round((activeVehicles / filteredVehicles.length) * 100) : 0;
 
   const kpis = [
     { label: 'ACTIVE VEHICLES', value: activeVehicles < 10 ? `0${activeVehicles}` : activeVehicles, color: '#3b82f6' },
@@ -39,7 +53,7 @@ const Dashboard = () => {
     { label: 'FLEET UTILIZATION', value: `${util}%`, color: '#10b981' }
   ];
 
-  const recentTrips = trips.slice(0, 5).map(t => ({
+  const recentTrips = filteredTrips.slice(0, 5).map(t => ({
     trip: t.tripId,
     vehicle: t.vehicle?.model || '--',
     driver: t.driver?.name || '--',
@@ -49,7 +63,7 @@ const Dashboard = () => {
     text: t.status === 'Draft' ? '#d1d5db' : '#fff'
   }));
 
-  const calcPct = (val) => vehicles.length > 0 ? Math.round((val / vehicles.length) * 100) : 0;
+  const calcPct = (val) => filteredVehicles.length > 0 ? Math.round((val / filteredVehicles.length) * 100) : 0;
   const vehicleStatus = [
     { label: 'Available', percent: `${calcPct(availableVehicles)}%`, color: '#10b981' },
     { label: 'On Trip', percent: `${calcPct(activeVehicles)}%`, color: '#60a5fa' },
@@ -63,14 +77,33 @@ const Dashboard = () => {
       <div className="mb-8">
         <h3 className="text-xs text-gray-500 uppercase tracking-widest mb-2">Filters</h3>
         <div className="flex gap-4">
-          {['Vehicle Type: All', 'Status: All', 'Region: All'].map((filter, idx) => (
-            <div key={idx} className="relative w-48">
-              <select className="w-full px-3 py-1.5 bg-transparent border border-[#444] rounded text-sm text-gray-300 appearance-none focus:outline-none focus:border-primary">
-                <option>{filter}</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-            </div>
-          ))}
+          <div className="relative w-48">
+            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="w-full px-3 py-1.5 bg-transparent border border-[#444] rounded text-sm text-gray-300 appearance-none focus:outline-none focus:border-primary">
+              <option className="bg-[#111]" value="All">Vehicle Type: All</option>
+              <option className="bg-[#111]" value="Van">Van</option>
+              <option className="bg-[#111]" value="Truck">Truck</option>
+              <option className="bg-[#111]" value="Mini">Mini</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+          </div>
+          <div className="relative w-48">
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="w-full px-3 py-1.5 bg-transparent border border-[#444] rounded text-sm text-gray-300 appearance-none focus:outline-none focus:border-primary">
+              <option className="bg-[#111]" value="All">Status: All</option>
+              <option className="bg-[#111]" value="Available">Available</option>
+              <option className="bg-[#111]" value="On Trip">On Trip</option>
+              <option className="bg-[#111]" value="In Shop">In Shop</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+          </div>
+          <div className="relative w-48">
+            <select value={regionFilter} onChange={e => setRegionFilter(e.target.value)} className="w-full px-3 py-1.5 bg-transparent border border-[#444] rounded text-sm text-gray-300 appearance-none focus:outline-none focus:border-primary">
+              <option className="bg-[#111]" value="All">Region: All</option>
+              <option className="bg-[#111]" value="Gandhinagar">Gandhinagar</option>
+              <option className="bg-[#111]" value="Ahmedabad">Ahmedabad</option>
+              <option className="bg-[#111]" value="Vatva">Vatva</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+          </div>
         </div>
       </div>
 

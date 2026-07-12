@@ -8,8 +8,9 @@ const generateToken = (id) => {
 };
 
 const authUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
-
+  const { password } = req.body;
+  const email = req.body.email ? req.body.email.toLowerCase().trim() : '';
+  
   const user = await User.findOne({ email });
 
   if (user && (await bcrypt.compare(password, user.password))) {

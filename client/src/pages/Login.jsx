@@ -9,7 +9,11 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [attempts, setAttempts] = useState(() => {
+    return parseInt(localStorage.getItem('loginAttempts') || '0');
+  });
+  const [locked, setLocked] = useState(attempts >= 5);
+  const [errorMsg, setErrorMsg] = useState(attempts >= 5 ? 'Maximum login attempts exceeded. Account locked.' : '');
   
   const navigate = useNavigate();
   const login = useStore(state => state.login);
@@ -17,19 +21,38 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
+    if (locked) {
+      setErrorMsg('Maximum login attempts exceeded. Account locked.');
+      return;
+    }
+
+    if (!email.trim() || !password) {
       setErrorMsg('Please fill in all fields.');
       return;
     }
+    
     setErrorMsg('');
-    const success = await login(email, password);
+    const success = await login(email.trim(), password);
+    
     if (success) {
+      localStorage.removeItem('loginAttempts');
       navigate('/dashboard');
+    } else {
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      localStorage.setItem('loginAttempts', newAttempts.toString());
+      
+      if (newAttempts >= 5) {
+        setLocked(true);
+        setErrorMsg('Maximum login attempts exceeded. Account locked.');
+      } else {
+        setErrorMsg(`Invalid credentials. ${5 - newAttempts} attempts remaining.`);
+      }
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-background-dark font-sans text-gray-200">
+    <div className="flex w-screen h-screen overflow-hidden bg-background-dark font-sans text-gray-200 absolute inset-0">
       {/* Left Panel */}
     <div className="w-1/2 bg-background-light text-white p-12 flex flex-col justify-between relative border-r border-gray-400">
         <div>
@@ -145,9 +168,10 @@ const Login = () => {
 
             <button 
               type="submit"
-              className="w-full py-3 bg-primary hover:bg-opacity-90 text-white rounded-lg text-lg font-bold transition-all"
+              disabled={locked}
+              className={`w-full py-3 rounded-lg text-lg font-bold transition-all ${locked ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-opacity-90 text-white'}`}
             >
-              Sign In
+              {locked ? 'Account Locked' : 'Sign In'}
             </button>
           </form>
 

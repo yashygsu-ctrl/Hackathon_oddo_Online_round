@@ -18,10 +18,25 @@ const runSeeder = async () => {
 
     // 1. Create Users
     const users = [
-      { name: 'Fleet Manager', email: 'manager@transitops.com', password: 'password123', role: 'Fleet Manager' },
-      { name: 'Dispatcher', email: 'dispatcher@transitops.com', password: 'password123', role: 'Dispatcher' },
-      { name: 'Safety Officer', email: 'safety@transitops.com', password: 'password123', role: 'Safety Officer' },
-      { name: 'Financial Analyst', email: 'finance@transitops.com', password: 'password123', role: 'Financial Analyst' },
+      // Fleet Managers
+      { name: 'Michael Chen', email: 'michael@transitops.com', password: 'password123', role: 'Fleet Manager' },
+      { name: 'Sarah Jenkins', email: 'sarah@transitops.com', password: 'password123', role: 'Fleet Manager' },
+      { name: 'David Okafor', email: 'david@transitops.com', password: 'password123', role: 'Fleet Manager' },
+      
+      // Dispatchers
+      { name: 'Emily Rodriguez', email: 'emily@transitops.com', password: 'password123', role: 'Dispatcher' },
+      { name: 'James Wilson', email: 'james@transitops.com', password: 'password123', role: 'Dispatcher' },
+      { name: 'Priya Patel', email: 'priya@transitops.com', password: 'password123', role: 'Dispatcher' },
+      
+      // Safety Officers
+      { name: 'Robert Thompson', email: 'robert@transitops.com', password: 'password123', role: 'Safety Officer' },
+      { name: 'Aisha Rahman', email: 'aisha@transitops.com', password: 'password123', role: 'Safety Officer' },
+      { name: 'Thomas Wright', email: 'thomas@transitops.com', password: 'password123', role: 'Safety Officer' },
+      
+      // Financial Analysts
+      { name: 'Jessica Lee', email: 'jessica@transitops.com', password: 'password123', role: 'Financial Analyst' },
+      { name: 'Marcus Johnson', email: 'marcus@transitops.com', password: 'password123', role: 'Financial Analyst' },
+      { name: 'Elena Popov', email: 'elena@transitops.com', password: 'password123', role: 'Financial Analyst' },
     ];
     for (const u of users) {
       await User.create(u);

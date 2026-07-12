@@ -27,6 +27,9 @@ const useStore = create((set, get) => ({
   
   loading: false,
   error: null,
+  isDarkMode: true,
+
+  toggleDarkMode: () => set(state => ({ isDarkMode: !state.isDarkMode })),
 
   login: async (email, password) => {
     set({ loading: true, error: null });
@@ -112,6 +115,19 @@ const useStore = create((set, get) => ({
       return true;
     } catch (error) {
       console.error('Error deleting trip', error);
+      return false;
+    }
+  },
+
+  completeTrip: async (id, finalOdometer, fuelConsumed) => {
+    try {
+      const { data } = await axios.post(`/api/trips/${id}/complete`, { finalOdometer, fuelConsumed });
+      set((state) => ({ 
+        trips: state.trips.map(t => t._id === id ? data : t) 
+      }));
+      return true;
+    } catch (error) {
+      console.error('Error completing trip', error);
       return false;
     }
   },

@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { 
-  getVehicles, getDrivers, getTrips, getMaintenance, getExpenses, 
-  addTrip, addMaintenance, addVehicle, deleteVehicle, 
-  addDriver, deleteDriver, deleteTrip, addExpense, deleteMaintenance, deleteExpense
+  getVehicles, addVehicle, deleteVehicle,
+  getDrivers, addDriver, deleteDriver,
+  getTrips, addTrip, deleteTrip, completeTrip,
+  getMaintenance, addMaintenance, deleteMaintenance,
+  getExpenses, addExpense, deleteExpense
 } = require('../controllers/apiController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -15,9 +17,9 @@ router.get('/drivers', protect, getDrivers);
 router.post('/drivers', protect, addDriver);
 router.delete('/drivers/:id', protect, deleteDriver);
 
-router.get('/trips', protect, getTrips);
-router.post('/trips', protect, addTrip);
-router.delete('/trips/:id', protect, deleteTrip);
+router.route('/trips').get(protect, getTrips).post(protect, addTrip);
+router.route('/trips/:id').delete(protect, deleteTrip);
+router.route('/trips/:id/complete').post(protect, completeTrip);
 
 router.get('/maintenance', protect, getMaintenance);
 router.post('/maintenance', protect, addMaintenance);
